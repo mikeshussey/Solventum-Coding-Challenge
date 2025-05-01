@@ -35,4 +35,20 @@ public class ShortenerController {
             limit.release();
         }
     }
+
+    @PostMapping("/decode")
+    public ResponseEntity<Map<String, String>> decode(@RequestBody Map<String, String> in) {
+        if (!limit.tryAcquire()) return ResponseEntity.status(429).body(Map.of("error", "Too many"));
+        try {
+            String url = in.get("url");
+            if (url == null || !url.startsWith("http://short.est/"))
+                return ResponseEntity.badRequest().body(Map.of("error", "Invalid short URL"));
+            String code = url.substring("http://short.est/".length());
+            String longUrl = shortToLong.get(code);
+            if (longUrl == null) return ResponseEntity.status(404).body(Map.of("error", "Not found"));
+            return ResponseEntity.ok(Map.of("url", longUrl));
+        } finally {
+            limit.release();
+        }
+    }
 }
